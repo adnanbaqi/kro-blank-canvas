@@ -17,20 +17,23 @@ export interface UserStats {
   draws: number;
 }
 
-export interface Battle {
+export interface BattlePreview {
   id: number;
   mc_a: string;
   mc_b: string;
   beat_url: string;
   ends_at: string;
-  winner?: string;
+  winner: string | null;
   submission_a_votes: number;
   submission_b_votes: number;
+}
+
+export interface Battle extends BattlePreview {
   status: 'active' | 'finished';
   has_voted?: boolean;
 }
 
-export interface BattleDetail {
+export interface BattleOut {
   id: number;
   beat_url: string;
   submission_a_url: string;
@@ -43,11 +46,14 @@ export interface BattleDetail {
   status: string;
   winner_submission_id: number | null;
   has_voted: boolean;
+}
+
+export interface BattleDetail extends BattleOut {
   submission_a_id?: number;
   submission_b_id?: number;
 }
 
-export interface Submission {
+export interface SubmissionOut {
   id: number;
   user_id: number;
   beat_id: number;
@@ -55,6 +61,8 @@ export interface Submission {
   created_at: string;
   votes: number;
 }
+
+export interface Submission extends SubmissionOut {}
 
 export interface SubmissionStatus {
   submission_id: number;
@@ -64,6 +72,17 @@ export interface SubmissionStatus {
   opponent_mc: string | null;
   status: string;
   disqualified: boolean;
+}
+
+export interface BattleResult {
+  battle_id: number;
+  beat_url: string;
+  opponent_mc: string;
+  submission_votes: number;
+  opponent_votes: number;
+  winner_mc: string | null;
+  status: string;
+  ends_at: string;
 }
 
 export interface LeaderboardEntry {
@@ -102,6 +121,26 @@ export interface AdminUser {
   mc_name: string;
   email: string;
   is_admin: boolean;
+}
+
+export interface Beat {
+  id: number;
+  title: string;
+  bpm: number;
+  style: string;
+  duration: string;
+  file_url: string;
+}
+
+export interface BeatCreate {
+  title: string;
+  file_url: string;
+}
+
+export interface TournamentCategory {
+  rap: string;
+  beat: string;
+  track: string;
 }
 
 // Custom error class to preserve response data
@@ -191,23 +230,31 @@ async register(userData: {
 
   // User endpoints
   async getCurrentUser(userId: number): Promise<User> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot access user profile. Please log in.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/users/me?user_id=${userId}`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<User>(response);
   }
 
   async getUserStats(userId: number): Promise<UserStats> {
+    if (this.isGuest()) {
+      return { total_battles: 0, wins: 0, losses: 0, draws: 0 };
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/users/me/stats?user_id=${userId}`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<UserStats>(response);
   }
 
   // Battles
-  async getActiveBattles(): Promise<Battle[]> {
+  async getActiveBattles(): Promise<BattlePreview[]> {
     if (this.isGuest()) {
       return [];
     }
@@ -216,10 +263,10 @@ async register(userData: {
       headers: this.getAuthHeaders(),
     });
 
-    return this.handleResponse<Battle[]>(response);
+    return this.handleResponse<BattlePreview[]>(response);
   }
 
-  async getFinishedBattles(): Promise<Battle[]> {
+  async getFinishedBattles(): Promise<BattlePreview[]> {
     if (this.isGuest()) {
       return [];
     }
@@ -228,23 +275,31 @@ async register(userData: {
       headers: this.getAuthHeaders(),
     });
 
-    return this.handleResponse<Battle[]>(response);
+    return this.handleResponse<BattlePreview[]>(response);
   }
 
-  async getMyBattles(): Promise<Battle[]> {
+  async getMyBattles(): Promise<BattleResult[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/battles/me`, {
       headers: this.getAuthHeaders(),
     });
-    
-    return this.handleResponse<Battle[]>(response);
+
+    return this.handleResponse<BattleResult[]>(response);
   }
 
-  async getBattleDetails(battleId: number): Promise<BattleDetail> {
+  async getBattleDetails(battleId: number): Promise<BattleOut> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot view battle details. Please log in.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/battles/${battleId}`, {
       headers: this.getAuthHeaders(),
     });
-    
-    return this.handleResponse<BattleDetail>(response);
+
+    return this.handleResponse<BattleOut>(response);
   }
 
   // Voting
@@ -282,8 +337,8 @@ async register(userData: {
   async uploadSubmission(userId: number, data: {
     beat_id: number;
     file_url: string;
-    tournament_id?: number;
-  }): Promise<Submission> {
+    tournament_id?: number | null;
+  }): Promise<SubmissionOut> {
     if (this.isGuest()) {
       throw new Error('Guests cannot submit. Please log in.');
     }
@@ -294,14 +349,18 @@ async register(userData: {
       body: JSON.stringify(data),
     });
 
-    return this.handleResponse<Submission>(response);
+    return this.handleResponse<SubmissionOut>(response);
   }
 
   async getMySubmissions(): Promise<SubmissionStatus[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/submissions/me`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<SubmissionStatus[]>(response);
   }
 
@@ -401,19 +460,23 @@ async register(userData: {
   }
 
   async getAllAdminUsers(): Promise<AdminUser[]> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/admins`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/admin-list`, {
       headers: this.getAuthHeaders(),
     });
 
     return this.handleResponse<AdminUser[]>(response);
   }
 
-  async getAvailableBeats(): Promise<{ id: number; title: string; bpm: number; style: string; duration: string; file_url: string }[]> {
+  async getAvailableBeats(): Promise<Beat[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/beats/`, {
       headers: this.getAuthHeaders(),
     });
 
-    return this.handleResponse<{ id: number; title: string; bpm: number; style: string; duration: string; file_url: string }[]>(response);
+    return this.handleResponse<Beat[]>(response);
   }
 
   async requestPasswordReset(email: string): Promise<{ message: string }> {
@@ -437,6 +500,10 @@ async register(userData: {
   }
 
   async updateUserProfile(userId: number, data: { mc_name?: string; hometown?: string }): Promise<User> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot update profile. Please log in.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
@@ -444,6 +511,40 @@ async register(userData: {
     });
 
     return this.handleResponse<User>(response);
+  }
+
+  async createTournament(title: string, category: 'rap' | 'beat' | 'track'): Promise<any> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot create tournaments. Please log in.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/tournaments/?title=${encodeURIComponent(title)}&category=${category}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async joinTournament(tournamentId: number, submissionId: number): Promise<any> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot join tournaments. Please log in.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/tournaments/${tournamentId}/join?submission_id=${submissionId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  async getTournamentBracket(tournamentId: number): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/tournaments/${tournamentId}/bracket`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return this.handleResponse<any>(response);
   }
 }
 
