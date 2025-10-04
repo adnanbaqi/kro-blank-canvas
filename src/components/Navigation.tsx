@@ -10,6 +10,7 @@ export const Navigation = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const isLoggedIn = localStorage.getItem('authToken');
+  const isGuest = localStorage.getItem('authToken') === 'guest';
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -31,14 +32,14 @@ export const Navigation = () => {
   }, [isLoggedIn]);
 
   const navItems = [
-    { path: '/dashboard', label: 'Battles', icon: Sword },
-    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { path: '/tournament', label: 'Tournament', icon: Crown },
-    { path: '/submit', label: 'Submit', icon: Mic },
-    { path: '/my-submissions', label: 'My Submissions', icon: FileAudio },
-    { path: '/profile', label: 'Profile', icon: User },
-    ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
-  ];
+    { path: '/dashboard', label: 'Battles', icon: Sword, allowGuest: true },
+    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy, allowGuest: true },
+    { path: '/tournament', label: 'Tournament', icon: Crown, allowGuest: true },
+    { path: '/submit', label: 'Submit', icon: Mic, allowGuest: false },
+    { path: '/my-submissions', label: 'My Submissions', icon: FileAudio, allowGuest: false },
+    { path: '/profile', label: 'Profile', icon: User, allowGuest: false },
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Shield, allowGuest: false }] : []),
+  ].filter(item => !isGuest || item.allowGuest);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -78,10 +79,18 @@ export const Navigation = () => {
                   </Link>
                 );
               })}
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
+              {isGuest ? (
+                <Link to="/login">
+                  <Button variant="battle" size="sm">
+                    Login
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              )}
             </div>
           )}
 
@@ -131,10 +140,18 @@ export const Navigation = () => {
                     </Link>
                   );
                 })}
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
+                {isGuest ? (
+                  <Link to="/login" onClick={() => setIsOpen(false)}>
+                    <Button variant="battle" size="sm" className="w-full justify-start">
+                      Login
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-2">

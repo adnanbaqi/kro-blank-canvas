@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Volume2, Clock, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BattleCardProps {
   battle: {
@@ -26,6 +27,7 @@ export const BattleCard = ({ battle, onVote }: BattleCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<'a' | 'b' | null>(null);
   const { toast } = useToast();
+  const { isGuest } = useAuth();
 
   const totalVotes = battle.submission_a_votes + battle.submission_b_votes;
   const mcAPercentage = totalVotes > 0 ? (battle.submission_a_votes / totalVotes) * 100 : 50;
@@ -65,6 +67,15 @@ export const BattleCard = ({ battle, onVote }: BattleCardProps) => {
   };
 
   const handleVote = (mcChoice: 'a' | 'b') => {
+    if (isGuest) {
+      toast({
+        title: "Login required",
+        description: "Please log in to vote in battles",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (battle.has_voted) {
       toast({
         title: "Already voted",
@@ -74,7 +85,7 @@ export const BattleCard = ({ battle, onVote }: BattleCardProps) => {
       return;
     }
 
-    const submissionId = mcChoice === 'a' ? 1 : 2; // Mock submission IDs - you'll need actual IDs from battle data
+    const submissionId = mcChoice === 'a' ? 1 : 2;
     onVote?.(battle.id, submissionId);
   };
 
@@ -125,8 +136,13 @@ export const BattleCard = ({ battle, onVote }: BattleCardProps) => {
               </div>
             </div>
             {battle.status === 'active' && !battle.has_voted && (
-              <Button variant="win" size="sm" onClick={() => handleVote('a')}>
-                Vote
+              <Button
+                variant="win"
+                size="sm"
+                onClick={() => handleVote('a')}
+                disabled={isGuest}
+              >
+                {isGuest ? 'Login to Vote' : 'Vote'}
               </Button>
             )}
             {battle.winner === battle.mc_a && (
@@ -164,8 +180,13 @@ export const BattleCard = ({ battle, onVote }: BattleCardProps) => {
               </div>
             </div>
             {battle.status === 'active' && !battle.has_voted && (
-              <Button variant="win" size="sm" onClick={() => handleVote('b')}>
-                Vote
+              <Button
+                variant="win"
+                size="sm"
+                onClick={() => handleVote('b')}
+                disabled={isGuest}
+              >
+                {isGuest ? 'Login to Vote' : 'Vote'}
               </Button>
             )}
             {battle.winner === battle.mc_b && (

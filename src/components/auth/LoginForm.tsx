@@ -11,8 +11,8 @@ import { apiService } from '@/lib/api';
 import { getUserFriendlyError } from '@/lib/errorMessages'; // Import the error mapping
 
 export const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('demo@rhymerivals.com');
+  const [password, setPassword] = useState('demo123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();

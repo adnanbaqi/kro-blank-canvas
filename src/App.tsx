@@ -42,12 +42,12 @@ const App = () => (
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowGuest>
                 <Dashboard />
               </ProtectedRoute>
             } />
             <Route path="/leaderboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowGuest>
                 <Leaderboard />
               </ProtectedRoute>
             } />
@@ -67,7 +67,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/tournament" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowGuest>
                 <Tournament />
               </ProtectedRoute>
             } />

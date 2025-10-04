@@ -5,6 +5,7 @@ import { apiService, User } from '@/lib/api';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: { email: string; password: string; mc_name: string; hometown?: string }) => Promise<void>;
@@ -106,9 +107,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const isGuest = localStorage.getItem('authToken') === 'guest';
+
   const value = {
     user,
     isAuthenticated: !!user,
+    isGuest,
     isLoading,
     login,
     register,

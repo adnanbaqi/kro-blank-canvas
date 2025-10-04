@@ -118,12 +118,15 @@ class ApiError extends Error {
 }
 
 class ApiService {
+  private isGuest(): boolean {
+    return localStorage.getItem('authToken') === 'guest';
+  }
+
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('authToken');
-    // console.log('Auth token:', token); // Debug logging
     return {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(token && token !== 'guest' && { 'Authorization': `Bearer ${token}` }),
     };
   }
 
@@ -205,18 +208,26 @@ async register(userData: {
 
   // Battles
   async getActiveBattles(): Promise<Battle[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/battles/active`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<Battle[]>(response);
   }
 
   async getFinishedBattles(): Promise<Battle[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/battles/finished`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<Battle[]>(response);
   }
 
@@ -238,6 +249,10 @@ async register(userData: {
 
   // Voting
   async vote(battleId: number, votedSubmissionId: number): Promise<string> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot vote. Please log in.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/votes/`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -246,16 +261,20 @@ async register(userData: {
         voted_submission_id: votedSubmissionId,
       }),
     });
-    
+
     return this.handleResponse<string>(response);
   }
 
   // Leaderboard
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    if (this.isGuest()) {
+      return [];
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/votes/leaderboard/wins`, {
       headers: this.getAuthHeaders(),
     });
-    
+
     return this.handleResponse<LeaderboardEntry[]>(response);
   }
 
@@ -265,12 +284,16 @@ async register(userData: {
     file_url: string;
     tournament_id?: number;
   }): Promise<Submission> {
+    if (this.isGuest()) {
+      throw new Error('Guests cannot submit. Please log in.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/v1/submissions/?user_id=${userId}`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    
+
     return this.handleResponse<Submission>(response);
   }
 
